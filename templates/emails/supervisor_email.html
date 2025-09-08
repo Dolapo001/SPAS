@@ -1,0 +1,41 @@
+{% extends "email_base.html" %}
+{% block title %}Group {{ group.number }} — Allocation Details{% endblock %}
+{% block body %}
+  <p>Hello {{ supervisor.name }},</p>
+
+  {% if body %}
+    <p>{{ body|linebreaksbr }}</p>
+  {% else %}
+    <p>Here are the students allocated to your group <strong>Group {{ group.number }}</strong>.</p>
+  {% endif %}
+
+  <h4>Group {{ group.number }} Students</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Matric No</th>
+        <th>Full Name</th>
+        <th>CGPA</th>
+        <th>Email</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in students %}
+        <tr>
+          <td>{{ s.matric_no }}</td>
+          <td>{{ s.full_name }}</td>
+          <td>{{ s.cgpa }}</td>
+          <td>{{ s.email }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">No students in this group.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p style="margin-top:12px;">
+    A CSV file with the student roster is attached for your convenience.
+  </p>
+
+  <p>Best regards,<br/>SPAS Admin</p>
+{% endblock %}

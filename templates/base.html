@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% block title %}Student Project Allocation System{% endblock %}</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'primary-start': '#A7C6DA',
+            'primary-mid': '#D4E7FE',
+            'primary-light': '#FFFFFF',
+            'secondary-start': '#A7E4DB',
+            'secondary-mid': '#B7C7C6',
+            'secondary-end': '#B2B5DA'
+          }
+        }
+      }
+    }
+  </script>
+
+  {% block extra_head %}{% endblock %}
+  <style>
+    /* --- Layout base & transitions --- */
+    #sidebar { width: 16rem; transition: width 260ms ease, transform 220ms ease; }
+    #main-content { transition: margin-left 260ms ease; margin-left: 16rem; }
+
+    /* Collapsed size (desktop) */
+    .sidebar-collapsed { width: 7rem !important; }
+    .main-collapsed { margin-left: 7rem !important; }
+
+    /* Sidebar text hide/show (smooth) */
+    .sidebar-text {
+      transition: opacity 180ms ease, max-width 180ms ease;
+      opacity: 1;
+      max-width: 1000px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .sidebar-collapsed .sidebar-text { opacity: 0; max-width: 0; }
+
+    /* Nav items spacing */
+    .sidebar-item {
+      transition: padding 160ms ease, justify-content 160ms ease;
+      min-height: 3rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+    .sidebar-collapsed .sidebar-item { justify-content: center; gap: 0; padding-left: 0.75rem; padding-right: 0.75rem; }
+
+    /* Quick action icon containers (fixed & not shrink) */
+    .sidebar .sidebar-icon-container{
+      flex: 0 0 auto;
+      width: 3.125rem; /* 50px */
+      height: 3.125rem;
+      min-width: 3.125rem;
+      min-height: 3.125rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.5rem;
+    }
+    .sidebar-collapsed .sidebar-icon-container { margin-right: 0; }
+
+    /* Nav icon sizing and gap */
+    .sidebar-icon {
+      flex: 0 0 auto;
+      width: 1.25rem;
+      height: 1.25rem;
+      margin-right: 0.75rem;
+      transition: margin 160ms ease, transform 120ms ease;
+    }
+    .sidebar-collapsed .sidebar-icon { margin-right: 0; }
+
+    /* Profile area */
+    .sidebar-user-avatar { transition: margin 160ms ease; }
+    .sidebar-collapsed .sidebar-user-avatar { margin: 0 auto; }
+    .sidebar-collapsed .sidebar-user-info { opacity: 0; max-width: 0; }
+
+    /* Scrollbar niceties */
+    #sidebar { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) transparent; -webkit-overflow-scrolling: touch; }
+    #sidebar::-webkit-scrollbar { width: 6px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.3); border-radius: 3px; }
+    #sidebar::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.5); }
+
+    /* NOTE: removed conflicting media transform rule — rely on utility classes below */
+    @media (max-width: 1023px) {
+      /* keep width consistent on mobile if needed */
+      #sidebar { width: 16rem !important; }
+      #main-content { margin-left: 0 !important; }
+    }
+  </style>
+</head>
+
+<body class="min-h-full bg-gradient-to-br from-primary-start via-primary-mid to-secondary-start">
+  <div class="min-h-screen flex relative">
+    <!-- Sidebar:
+         IMPORTANT: default hidden on mobile via -translate-x-full; visible on lg with lg:translate-x-0.
+         JS toggles/removes the -translate-x-full class for mobile open/close.
+    -->
+    <aside id="sidebar"
+           class="fixed inset-y-0 left-0 z-50 w-64 backdrop-blur-lg bg-white/30 border-r border-white/20 overflow-y-auto transform -translate-x-full lg:translate-x-0">
+      <div class="flex flex-col h-full relative">
+        <!-- Logo -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/20 flex-shrink-0">
+          <a href="{% url 'dashboard' %}" class="flex items-center">
+            <div class="w-8 h-8 bg-gradient-to-br from-secondary-start to-secondary-end rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+            </div>
+            <span class="ml-3 text-xl font-bold text-gray-800 sidebar-text">SPAS</span>
+          </a>
+          <!-- NOTE: in-sidebar toggle intentionally removed -->
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 px-4 py-6 space-y-2">
+          <a href="{% url 'dashboard' %}" class="flex items-center text-gray-700 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %} rounded-xl hover:bg-white/30 transition-all duration-200 sidebar-item">
+            <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 7 4-4 4 4"></path>
+            </svg>
+            <span class="sidebar-text">Dashboard</span>
+          </a>
+
+          <a href="{% url 'students:list' %}" class="flex items-center text-gray-700 {% if 'students' in request.resolver_match.url_name %}bg-white/20{% endif %} rounded-xl hover:bg-white/20 transition-all duration-200 sidebar-item">
+            <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+            <span class="sidebar-text">Students</span>
+          </a>
+
+          <a href="{% url 'supervisors:list' %}" class="flex items-center text-gray-700 {% if 'supervisors' in request.resolver_match.url_name %}bg-white/20{% endif %} rounded-xl hover:bg-white/20 transition-all duration-200 sidebar-item">
+            <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <span class="sidebar-text">Supervisors</span>
+          </a>
+
+          <a href="{% url 'allocation:run' %}" class="flex items-center text-gray-700 {% if 'allocation' in request.resolver_match.url_name %}bg-white/20{% endif %} rounded-xl hover:bg-white/20 transition-all duration-200 sidebar-item">
+            <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span class="sidebar-text">Allocation</span>
+          </a>
+        </nav>
+
+        <!-- Quick Actions -->
+        <div class="px-4 py-6 border-t border-white/20 flex-shrink-0">
+          <h3 class="text-sm font-semibold text-gray-800 mb-4 sidebar-text">Quick Actions</h3>
+          <div class="space-y-3">
+            <a href="{% url 'students:create' %}" class="group flex items-center p-3 border border-white/40 rounded-xl hover:bg-white/20 transition-all duration-200 sidebar-item">
+              <div class="sidebar-icon-container bg-gradient-to-r from-blue-400 to-blue-600">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+              </div>
+              <span class="text-sm font-medium text-gray-800 sidebar-text">Add Student</span>
+            </a>
+
+            <a href="{% url 'students:upload' %}" class="group flex items-center p-3 border border-white/40 rounded-xl hover:bg-white/20 transition-all duration-200 sidebar-item">
+              <div class="sidebar-icon-container bg-gradient-to-r from-green-400 to-green-600">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+              </div>
+              <span class="text-sm font-medium text-gray-800 sidebar-text">Upload Students</span>
+            </a>
+
+            <a href="{% url 'supervisors:create' %}" class="group flex items-center p-3 border border-white/40 rounded-xl hover:bg-white/20 transition-all duration-200 sidebar-item">
+              <div class="sidebar-icon-container bg-gradient-to-r from-purple-400 to-purple-600">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                </svg>
+              </div>
+              <span class="text-sm font-medium text-gray-800 sidebar-text">Add Supervisor</span>
+            </a>
+
+            <a href="{% url 'allocation:results' %}" class="group flex items-center p-3 border border-white/40 rounded-xl hover:bg-white/20 transition-all duration-200 sidebar-item">
+              <div class="sidebar-icon-container bg-gradient-to-r from-secondary-start to-secondary-end">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+              </div>
+              <span class="text-sm font-medium text-gray-800 sidebar-text">View Results</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Profile -->
+        <div class="px-4 py-4 border-t border-white/20 flex-shrink-0">
+          {% if user.is_authenticated %}
+            <div class="flex items-center mb-3">
+              <div class="w-10 h-10 bg-gradient-to-r from-secondary-start to-secondary-end rounded-full flex items-center justify-center sidebar-user-avatar">
+                <span class="text-sm font-medium text-white">
+                  {% if user.first_name %}{{ user.first_name.0 }}{% elif user.email %}{{ user.email.0 }}{% else %}U{% endif %}
+                </span>
+              </div>
+              <div class="ml-3 flex-1 sidebar-text sidebar-user-info">
+                <p class="text-sm font-medium text-gray-800">{% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.email }}{% endif %}</p>
+                <p class="text-xs text-gray-600">{{ user.email }}</p>
+              </div>
+            </div>
+            <form method="post" action="{% url 'logout' %}" class="w-full">
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="w-full block text-center bg-gradient-to-r from-red-400 to-red-600 text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm sidebar-text"
+                id="sidebar-logout-btn"
+              >
+                Logout
+              </button>
+            </form>
+
+          {% else %}
+            <a href="{% url 'login' %}" class="w-full block text-center bg-gradient-to-r from-secondary-start to-secondary-end text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm sidebar-text">Sign In</a>
+          {% endif %}
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile backdrop -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden" onclick="toggleMobileSidebar()"></div>
+
+    <!-- Main content -->
+    <div id="main-content" class="flex-1 flex flex-col transition-all duration-300 ease-in-out min-w-0">
+      <!-- Desktop header with only header toggle (desktop) -->
+      <header class="hidden lg:flex backdrop-blur-lg bg-white/30 border-b border-white/20 sticky top-0 z-30 px-6 py-3 items-center">
+        <button id="header-sidebar-toggle" aria-pressed="false" class="text-gray-700 hover:text-gray-900 p-2 rounded-lg hover:bg-white/20 transition-all mr-4" title="Toggle sidebar (desktop)">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="11 17 6 12 11 7"></polyline>
+            <polyline points="18 17 13 12 18 7"></polyline>
+          </svg>
+        </button>
+        <h1 class="text-xl font-semibold text-gray-800">
+          {% block page_title %}
+          {% with view_name=request.resolver_match.view_name|default:'' %}
+            {% if 'dashboard' in view_name %}
+              Dashboard
+            {% elif 'students' in view_name %}
+              Students
+            {% elif 'supervisors' in view_name %}
+              Supervisors
+            {% elif 'allocation' in view_name %}
+              Allocation
+            {% else %}
+              SPAS
+            {% endif %}
+          {% endwith %}
+        {% endblock %}
+        </h1>
+      </header>
+
+      <!-- Mobile header -->
+      <header class="lg:hidden backdrop-blur-lg bg-white/30 border-b border-white/20 sticky top-0 z-30">
+        <div class="flex items-center justify-between px-4 py-3">
+          <button onclick="toggleMobileSidebar()" class="text-gray-700 hover:text-gray-900 p-2 rounded-lg hover:bg-white/20 transition-all" aria-label="Open sidebar (mobile)">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          <a href="{% url 'dashboard' %}" class="flex items-center">
+            <div class="w-8 h-8 bg-gradient-to-br from-secondary-start to-secondary-end rounded-lg flex items-center justify-center mr-2">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+            </div>
+            <span class="text-xl font-bold text-gray-800">SPAS</span>
+          </a>
+          <div class="w-8"></div>
+        </div>
+      </header>
+
+      <!-- Messages & main content (unchanged) -->
+      {% if messages %}
+        <div class="px-6 pt-4">
+          {% for message in messages %}
+            <div class="alert-{{ message.tags }} backdrop-blur-lg bg-white/40 border border-white/30 rounded-xl p-4 mb-4 shadow-lg animate-slide-down">
+              <div class="flex items-center">
+                {% if message.tags == 'success' %}
+                  <svg class="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                {% elif message.tags == 'error' %}
+                  <svg class="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                {% else %}
+                  <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                {% endif %}
+                <span class="text-gray-800">{{ message }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <main class="flex-1 p-6 overflow-auto">
+        {% block content %}{% endblock %}
+      </main>
+
+      <footer class="backdrop-blur-lg bg-white/20 border-t border-white/20 flex-shrink-0">
+        <div class="px-6 py-4">
+          <div class="flex flex-col md:flex-row justify-between items-center">
+            <div class="text-gray-700 text-sm">© 2025 Student Project Allocation System. All rights reserved.</div>
+            <div class="flex space-x-4 mt-2 md:mt-0">
+              <a href="#" class="text-gray-600 hover:text-gray-800 transition-colors text-sm">Privacy</a>
+              <a href="#" class="text-gray-600 hover:text-gray-800 transition-colors text-sm">Terms</a>
+              <a href="#" class="text-gray-600 hover:text-gray-800 transition-colors text-sm">Support</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+    const headerToggle = document.getElementById('header-sidebar-toggle');
+
+    let collapsed = false;
+
+    // Apply desktop collapsed state
+    function applyCollapsedState(c) {
+      if (c) {
+        sidebar.classList.add('sidebar-collapsed');
+        mainContent.classList.add('main-collapsed');
+        headerToggle && headerToggle.setAttribute('aria-pressed', 'true');
+      } else {
+        sidebar.classList.remove('sidebar-collapsed');
+        mainContent.classList.remove('main-collapsed');
+        headerToggle && headerToggle.setAttribute('aria-pressed', 'false');
+      }
+    }
+
+    function toggleSidebarDesktop() {
+      if (window.innerWidth < 1024) return;
+      collapsed = !collapsed;
+      applyCollapsedState(collapsed);
+    }
+
+    // MOBILE: toggle by adding/removing the -translate-x-full tailwind class
+    function toggleMobileSidebar() {
+      if (!sidebar) return;
+      if (sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.remove('-translate-x-full');
+        sidebarBackdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        sidebarBackdrop.classList.add('hidden');
+      }
+    }
+    window.toggleMobileSidebar = toggleMobileSidebar;
+
+    // wire header toggle for desktop
+    headerToggle && headerToggle.addEventListener('click', toggleSidebarDesktop);
+
+    // Keep consistent on resize
+    window.addEventListener('resize', () => {
+      if (window.innerWidth < 1024) {
+        // mobile: hide sidebar
+        sidebar.classList.add('-translate-x-full');
+        sidebarBackdrop.classList.add('hidden');
+        collapsed = false;
+        applyCollapsedState(collapsed);
+      } else {
+        // desktop: ensure sidebar is visible (not translated) and respect collapsed flag
+        sidebar.classList.remove('-translate-x-full');
+        sidebarBackdrop.classList.add('hidden');
+        applyCollapsedState(collapsed);
+      }
+    });
+
+    // initial state
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.innerWidth >= 1024) {
+        sidebar.classList.remove('-translate-x-full');
+        collapsed = false;
+        applyCollapsedState(collapsed);
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        collapsed = false;
+        applyCollapsedState(collapsed);
+      }
+    });
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

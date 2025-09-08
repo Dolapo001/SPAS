@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Supervisors - Student Project Allocation System{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="backdrop-blur-lg bg-white/40 border border-white/30 rounded-2xl p-6 shadow-xl mb-8">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <div class="flex items-center mb-4 sm:mb-0">
+                <div class="w-12 h-12 bg-gradient-to-r from-purple-400 to-purple-600 rounded-xl flex items-center justify-center mr-4">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Supervisors</h1>
+                    <p class="text-gray-600">Manage project supervisors</p>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <a href="{% url 'supervisors:create' %}" class="bg-gradient-to-r from-secondary-start to-secondary-end hover:from-secondary-mid hover:to-secondary-end text-white font-semibold py-2 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Supervisor
+                </a>
+                <a href="{% url 'supervisors:upload' %}" class="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white font-semibold py-2 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    Upload CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supervisors Table -->
+    <div class="backdrop-blur-lg bg-white/40 border border-white/30 rounded-2xl shadow-xl overflow-hidden">
+        {% if has_supervisors %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-white/20">
+                <thead class="bg-white/10">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white/5 divide-y divide-white/10">
+                    {% for supervisor in supervisors %}
+                    <tr class="hover:bg-white/10 transition-colors duration-150">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ supervisor.name }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <a href="{% url 'supervisors:edit' supervisor.id %}" class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
+                            <button onclick="confirmDelete('{{ supervisor.id }}')" class="text-red-600 hover:text-red-700 text-sm font-medium">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No supervisors</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by adding a new supervisor.</p>
+            <div class="mt-6">
+                <a href="{% url 'supervisors:create' %}" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-secondary-start to-secondary-end hover:from-secondary-mid hover:to-secondary-end text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Supervisor
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if supervisors.has_other_pages %}
+    <div class="mt-8 flex justify-center">
+        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            {% if supervisors.has_previous %}
+            <a href="?page={{ supervisors.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-white/30 bg-white/20 text-sm font-medium text-gray-500 hover:bg-white/40">
+                <span class="sr-only">Previous</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+            </a>
+            {% endif %}
+
+            {% for i in supervisors.paginator.page_range %}
+                {% if supervisors.number == i %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-secondary-start bg-secondary-start text-sm font-medium text-white">
+                    {{ i }}
+                </span>
+                {% else %}
+                <a href="?page={{ i }}" class="relative inline-flex items-center px-4 py-2 border border-white/30 bg-white/20 text-sm font-medium text-gray-700 hover:bg-white/40">
+                    {{ i }}
+                </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if supervisors.has_next %}
+            <a href="?page={{ supervisors.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-white/30 bg-white/20 text-sm font-medium text-gray-500 hover:bg-white/40">
+                <span class="sr-only">Next</span>
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+    
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm hidden z-50" onclick="hideDeleteModal()">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="backdrop-blur-lg bg-white/90 border border-white/40 rounded-2xl p-8 shadow-2xl max-w-md w-full" onclick="event.stopPropagation()">
+            <div class="text-center">
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Delete Supervisor</h3>
+                <p class="text-gray-600 mb-6" id="deleteMessage">Are you sure you want to delete this supervisor?</p>
+                <div class="flex space-x-4">
+                    <button onclick="hideDeleteModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg">Cancel</button>
+                    <form id="deleteForm" method="post" class="flex-1">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(supervisorId) {
+    document.getElementById('deleteMessage').textContent = `Are you sure you want to delete this supervisor? This action cannot be undone.`;
+    // Use Django's URL template tag to generate the correct URL
+    document.getElementById('deleteForm').action = `/supervisors/${supervisorId}/delete/`;
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function hideDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') hideDeleteModal();
+});
+</script>
+{% endblock %}

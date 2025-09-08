@@ -1,0 +1,30 @@
+{% extends "email_base.html" %}
+{% block title %}Allocation — Group {{ group.number }}{% endblock %}
+{% block body %}
+  <p>Hello {{ student.full_name|default:student.matric_no }},</p>
+
+  {% if body %}
+    <p>{{ body|linebreaksbr }}</p>
+  {% else %}
+    <p>You have been allocated to <strong>Group {{ group.number }}</strong>.</p>
+  {% endif %}
+
+  <h4>Your Supervisor</h4>
+  {% if supervisor %}
+    <p>
+      Name: {{ supervisor.name }}<br>
+      Email: {{ supervisor.email|default:"Not available" }}
+    </p>
+  {% else %}
+    <p>Supervisor: (Not assigned)</p>
+  {% endif %}
+
+  <h4>Your details</h4>
+  <table>
+    <tr><th>Matric No</th><td>{{ student.matric_no }}</td></tr>
+    <tr><th>CGPA</th><td>{{ student.cgpa }}</td></tr>
+  </table>
+
+  <p>If you have any questions, contact your department admin.</p>
+  <p>Best,<br/>SPAS Team</p>
+{% endblock %}
