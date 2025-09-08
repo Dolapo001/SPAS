@@ -15,12 +15,20 @@ PER_PAGE = 20  # rows per page for pagination
 
 @login_required(login_url='/login/')
 def supervisor_list(request):
-    # Check if user has a department assigned
+    print(f"User: {request.user}")
+    print(f"User department: {getattr(request.user, 'department', 'No department attribute')}")
+
     if hasattr(request.user, 'department') and request.user.department:
+        print(f"User department ID: {request.user.department.id}")
+        print(f"User department name: {request.user.department.name}")
+
+        # Check how many supervisors are in this department
+        supervisor_count = Supervisor.objects.filter(department=request.user.department).count()
+        print(f"Supervisors in user's department: {supervisor_count}")
+
         qs = Supervisor.objects.filter(department=request.user.department).order_by('name')
     else:
-        # If user has no department, show all supervisors or none based on your requirements
-        qs = Supervisor.objects.none()  # or Supervisor.objects.all() if you want to show all
+        qs = Supervisor.objects.none()
 
     paginator = Paginator(qs, PER_PAGE)
     page_number = request.GET.get('page', 1)
@@ -32,7 +40,6 @@ def supervisor_list(request):
         'supervisors': supervisors,
         'has_supervisors': has_supervisors,
     })
-
 
 @login_required(login_url='/login/')
 def supervisor_create(request):
@@ -101,8 +108,10 @@ def upload_supervisors(request):
                         else:
                             updated_count += 1
                     else:
+                        # FIXED: Include department in both lookup and defaults
                         supervisor, created = Supervisor.objects.get_or_create(
                             name=name,
+                            department=request.user.department,  # Added this line
                             defaults={'email': email}
                         )
                         if created:
@@ -134,7 +143,6 @@ def upload_supervisors(request):
         form = SupervisorUploadForm()
 
     return render(request, "supervisors/upload.html", {"form": form})
-
 
 @login_required(login_url='/login/')
 def download_supervisor_template(request):

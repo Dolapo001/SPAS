@@ -27,7 +27,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-=+22$xoy%y(t9^u1v5nuo6kc@5lwoh*sjody+sngntip2_b&3p'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+#DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 # Application definition
@@ -164,8 +165,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 # Security
-SECURE_SSL_REDIRECT = True
-CSRF_TRUSTED_ORIGINS = ['https://*.vercel.app', "http://127.0.0.1:8000"]
+#SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False
+CSRF_TRUSTED_ORIGINS = ['https://*.vercel.app', "http://127.0.0.1:8000/"]
 
 
 # Default primary key field type
