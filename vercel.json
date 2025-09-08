@@ -1,10 +1,11 @@
 {
   "version": 2,
   "builds": [
-    { "src": "your_project/asgi.py", "use": "@vercel/python" }
+    { "src": "vercel_handler.py", "use": "@vercel/python" }
   ],
   "routes": [
     { "src": "/static/(.*)", "dest": "/static/$1" },
-    { "src": "/(.*)", "dest": "nacos_allocation/asgi.py" }
-  ]
+    { "src": "/(.*)", "dest": "vercel_handler.py" }
+  ],
+  "buildCommand": "./build.sh"
 }
