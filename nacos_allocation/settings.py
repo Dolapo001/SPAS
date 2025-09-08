@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
-
+from .jazzmin import JAZZMIN_SETTINGS
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,12 +27,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-=+22$xoy%y(t9^u1v5nuo6kc@5lwoh*sjody+sngntip2_b&3p'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
 INSTALLED_APPS = [
+    "jazzmin",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -42,7 +43,8 @@ INSTALLED_APPS = [
     'allocation.apps.AllocationConfig',
     'supervisors.apps.SupervisorsConfig',
     'students.apps.StudentsConfig',
-    'frontend.apps.FrontendConfig'
+    'frontend.apps.FrontendConfig',
+
 ]
 
 MIDDLEWARE = [
@@ -162,8 +164,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 # Security
-SECURE_SSL_REDIRECT = True
-CSRF_TRUSTED_ORIGINS = ['https://*.vercel.app']
+SECURE_SSL_REDIRECT = False
+CSRF_TRUSTED_ORIGINS = ['https://*.vercel.app', "http://127.0.0.1:8000"]
 
 
 # Default primary key field type
@@ -173,3 +175,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
+
+JAZZMIN_SETTINGS = JAZZMIN_SETTINGS

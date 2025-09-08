@@ -2,6 +2,7 @@ asgiref==3.9.1
 click==8.2.1
 dj-database-url==3.0.1
 Django==5.2.6
+django-jazzmin==3.0.1
 gunicorn==23.0.0
 h11==0.16.0
 packaging==25.0
