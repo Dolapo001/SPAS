@@ -15,7 +15,13 @@ PER_PAGE = 20  # rows per page for pagination
 
 @login_required(login_url='/login/')
 def supervisor_list(request):
-    qs = Supervisor.objects.filter(department=request.user.department).order_by('name')
+    # Check if user has a department assigned
+    if hasattr(request.user, 'department') and request.user.department:
+        qs = Supervisor.objects.filter(department=request.user.department).order_by('name')
+    else:
+        # If user has no department, show all supervisors or none based on your requirements
+        qs = Supervisor.objects.none()  # or Supervisor.objects.all() if you want to show all
+
     paginator = Paginator(qs, PER_PAGE)
     page_number = request.GET.get('page', 1)
     supervisors = paginator.get_page(page_number)

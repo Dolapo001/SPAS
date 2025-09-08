@@ -52,6 +52,17 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">{{ supervisor.name }}</div>
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                {{ supervisor.department.name|default:"No department" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ supervisor.email|default:"No email" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ supervisor.current_students_count }}</div>
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <a href="{% url 'supervisors:edit' supervisor.id %}" class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
                             <button onclick="confirmDelete('{{ supervisor.id }}')" class="text-red-600 hover:text-red-700 text-sm font-medium">
@@ -59,7 +70,7 @@
                             </button>
                         </td>
                     </tr>
-                    {% endfor %}
+{% endfor %}
                 </tbody>
             </table>
         </div>
