@@ -21,6 +21,10 @@ import random
 from collections import defaultdict
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 @login_required(login_url='/login/')
 def run_allocation(request):
@@ -343,58 +347,80 @@ def allocation_detail(request, pk):
 
 def send_emails_for_group(group, subject, body):
     """
-    Send emails to supervisor and students in a group
-    Returns a dictionary with success status and any errors
+    Send emails to supervisor (with CSV attachment) and to students.
+    Returns a dictionary with summary and per-student errors.
     """
-    supervisor = group.supervisor
+    supervisor = getattr(group, "supervisor", None)
     students = group.students.all()
 
     result = {
-        'group_id': group.id,
-        'success': False,
-        'supervisor_email_sent': False,
-        'students_sent': 0,
-        'errors': []
+        "group_id": group.id,
+        "success": False,
+        "supervisor_email_sent": False,
+        "students_sent": 0,
+        "students_failed": [],   # list of {"student_id", "email", "error"}
+        "errors": [],            # general errors
     }
 
+    # Optional: quick sanity check for student emails (log)
+    student_emails = [s.email for s in students]
+    logger.debug("Preparing to send emails for group %s. Student emails: %s", group.id, student_emails)
+
     try:
-        # Send email to supervisor
-        if supervisor and supervisor.email:
-            supervisor_ctx = {
-                "group": group,
-                "supervisor": supervisor,
-                "students": students,
-                "body": body,
-            }
-            html_content = render_to_string("emails/supervisor_email.html", supervisor_ctx)
-            text_content = strip_tags(html_content) or body
+        # open a single SMTP connection and reuse it
+        connection = get_connection(fail_silently=False)
+        connection.open()
 
-            email = EmailMultiAlternatives(
-                subject=subject,
-                body=text_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[supervisor.email],
-            )
-            email.attach_alternative(html_content, "text/html")
+        # Send supervisor email if present
+        if supervisor and getattr(supervisor, "email", None):
+            try:
+                supervisor_ctx = {
+                    "group": group,
+                    "supervisor": supervisor,
+                    "students": students,
+                    "body": body,
+                }
+                html_content = render_to_string("emails/supervisor_email.html", supervisor_ctx)
+                text_content = strip_tags(html_content) or body
 
-            # Add CSV attachment
-            csv_buffer = io.StringIO()
-            writer = csv.writer(csv_buffer)
-            writer.writerow(["Matric No", "Full Name", "CGPA", "Email"])
-            for student in students:
-                writer.writerow([student.matric_no, student.full_name or "", str(student.cgpa), student.email or ""])
+                email = EmailMultiAlternatives(
+                    subject=subject,
+                    body=text_content,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[supervisor.email],
+                    connection=connection
+                )
+                email.attach_alternative(html_content, "text/html")
 
-            csv_data = csv_buffer.getvalue()
-            csv_buffer.close()
-            filename = f"group_{group.number}_students.csv"
-            email.attach(filename, csv_data, "text/csv")
+                # CSV attachment for supervisor
+                csv_buffer = io.StringIO()
+                writer = csv.writer(csv_buffer)
+                writer.writerow(["Matric No", "Full Name", "CGPA", "Email"])
+                for s in students:
+                    writer.writerow([s.matric_no, s.full_name or "", str(s.cgpa), s.email or ""])
+                csv_data = csv_buffer.getvalue()
+                csv_buffer.close()
+                filename = f"group_{group.number}_students.csv"
+                email.attach(filename, csv_data, "text/csv")
 
-            email.send(fail_silently=False)
-            result['supervisor_email_sent'] = True
+                email.send()
+                result["supervisor_email_sent"] = True
+            except Exception as sup_exc:
+                logger.exception("Supervisor email send failed for group %s", group.id)
+                result["errors"].append(f"Supervisor send error: {str(sup_exc)}")
 
-        # Send emails to students
+        # Send individual student emails (each has its own try/except)
         for student in students:
-            if student.email:
+            if not getattr(student, "email", None):
+                # No email address — record as failed/skip
+                result["students_failed"].append({
+                    "student_id": getattr(student, "id", None),
+                    "email": None,
+                    "error": "missing email"
+                })
+                continue
+
+            try:
                 student_ctx = {
                     "student": student,
                     "supervisor": supervisor,
@@ -409,15 +435,30 @@ def send_emails_for_group(group, subject, body):
                     body=text_content,
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     to=[student.email],
+                    connection=connection
                 )
                 email.attach_alternative(html_content, "text/html")
-                email.send(fail_silently=False)
-                result['students_sent'] += 1
+                email.send()
+                result["students_sent"] += 1
+            except Exception as stud_exc:
+                logger.exception("Failed to send to student %s (group %s)", getattr(student, "id", None), group.id)
+                result["students_failed"].append({
+                    "student_id": getattr(student, "id", None),
+                    "email": getattr(student, "email", None),
+                    "error": str(stud_exc)
+                })
 
-        result['success'] = True
+        # close connection
+        try:
+            connection.close()
+        except Exception:
+            logger.debug("Connection close failed (ignored)")
 
+        result["success"] = True
     except Exception as e:
-        result['errors'].append(str(e))
+        # global failure (e.g., cannot open connection at all)
+        logger.exception("Global email send failure for group %s", group.id)
+        result["errors"].append(str(e))
 
     return result
 

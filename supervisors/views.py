@@ -15,7 +15,7 @@ PER_PAGE = 20  # rows per page for pagination
 
 @login_required(login_url='/login/')
 def supervisor_list(request):
-    qs = Supervisor.objects.all().order_by('name')
+    qs = Supervisor.objects.filter(department=request.user.department).order_by('name')
     paginator = Paginator(qs, PER_PAGE)
     page_number = request.GET.get('page', 1)
     supervisors = paginator.get_page(page_number)
@@ -33,7 +33,9 @@ def supervisor_create(request):
     if request.method == 'POST':
         form = SupervisorForm(request.POST)
         if form.is_valid():
-            form.save()
+            supervisor = form.save(commit=False)
+            supervisor.department = request.user.department   # 🔑 tie to user’s department
+            supervisor.save()
             messages.success(request, 'Supervisor created successfully!')
             return redirect('supervisors:list')
     else:
@@ -85,6 +87,7 @@ def upload_supervisors(request):
                     if update_existing:
                         supervisor, created = Supervisor.objects.update_or_create(
                             name=name,
+                            department=request.user.department,
                             defaults={'email': email}
                         )
                         if created:
@@ -157,7 +160,7 @@ def supervisor_edit(request, pk):
 
 @login_required(login_url='/login/')
 def supervisor_delete(request, pk):
-    supervisor = get_object_or_404(Supervisor, pk=pk)
+    supervisor = get_object_or_404(Supervisor, pk=pk, department=request.user.department)
     if request.method == 'POST':
         supervisor.delete()
         messages.success(request, 'Supervisor deleted successfully!')

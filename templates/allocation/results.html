@@ -345,7 +345,7 @@ async function submitEmail(event) {
     const data = await resp.json();
 
     if (data.status === "ok") {
-      alert(`Email sent successfully! Supervisor: ${data.results.supervisor_sent ? 'Yes' : 'No'}, Students: ${data.results.students_sent}`);
+      alert(`Email sent successfully! Supervisor: ${data.results.supervisor_email_sent ? 'Yes' : 'No'}, Students: ${data.results.students_sent}`);
       hideEmailModal();
     } else {
       alert("Unexpected server response.");
