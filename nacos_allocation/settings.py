@@ -14,11 +14,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 from .jazzmin import JAZZMIN_SETTINGS
+import sys
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+# At the top of settings.py
 
+if 'runserver' in sys.argv:
+    SECURE_SSL_REDIRECT = False
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -30,6 +34,13 @@ SECRET_KEY = 'django-insecure-=+22$xoy%y(t9^u1v5nuo6kc@5lwoh*sjody+sngntip2_b&3p
 DEBUG = False
 #DEBUG = True
 ALLOWED_HOSTS = ["*"]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.vercel.app',
+    'http://127.0.0.1:8000/',
+    'http://localhost:8000/',
+    "https://*.onrender.com",
+]
 
 # Application definition
 
@@ -65,7 +76,7 @@ AUTH_USER_MODEL = "frontend.User"
 
 # settings.py
 # Ensure these settings are properly configured
-CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_SECURE = True  # Set to True in production with HTTPS
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False  # Set to True if you want to store CSRF token in session instead of cookie
 
