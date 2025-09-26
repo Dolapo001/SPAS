@@ -40,7 +40,9 @@ def run_allocation(request):
                 department=department,
                 groups__isnull=True
             ))
-            supervisors = list(Supervisor.objects.all())
+
+            # CHANGE: Only get supervisors from the user's department, not all supervisors
+            supervisors = list(Supervisor.objects.filter(department=department))
 
             if len(unassigned_students) == 0 or len(supervisors) == 0:
                 messages.error(request, 'Need at least 1 unassigned student and 1 supervisor to run allocation.')
@@ -50,8 +52,11 @@ def run_allocation(request):
                 messages.error(request, f'Number of groups cannot exceed number of supervisors ({len(supervisors)}).')
                 return redirect('allocation:run')
 
-            # Get supervisors without groups in previous allocations
-            used_supervisor_ids = set(Group.objects.values_list('supervisor_id', flat=True))
+            # CHANGE: Filter used supervisors by department as well
+            used_supervisor_ids = set(Group.objects.filter(
+                department=department
+            ).values_list('supervisor_id', flat=True))
+
             unused_supervisors = [s for s in supervisors if s.id not in used_supervisor_ids]
 
             # If we have unused supervisors, use them first
@@ -118,7 +123,10 @@ def run_allocation(request):
     unassigned_students_count = Student.objects.filter(
         department=department, groups__isnull=True
     ).count()
-    total_supervisors = Supervisor.objects.count()
+
+    # CHANGE: Only count supervisors from the user's department
+    total_supervisors = Supervisor.objects.filter(department=department).count()
+
     previous_allocations = AllocationResult.objects.filter(
         groups__department=department
     ).distinct().order_by('-created_at')[:5]

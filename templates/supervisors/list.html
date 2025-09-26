@@ -58,7 +58,11 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">
-                                {{ supervisor.department.name|default:"No department" }}
+                               {% if supervisor.department %}
+                                    {{ supervisor.department.name }}
+                                {% else %}
+                                    No department
+                                {% endif %}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">

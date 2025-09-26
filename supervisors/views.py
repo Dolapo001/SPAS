@@ -1,7 +1,7 @@
 # supervisors/views.py
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -14,39 +14,43 @@ from .forms import SupervisorForm, SupervisorUploadForm
 import csv
 import io
 
-PER_PAGE = 20  # rows per page for pagination
+PER_PAGE = getattr(settings, "PER_PAGE", 20)  # fallback if not defined
 
 
 @login_required(login_url='/login/')
 def supervisor_list(request):
     department = getattr(request.user, "department", None)
 
-    # If user has no department, return empty results
+    # If user has no department, return empty page (no DB work)
     if not department:
+        empty_page = Paginator([], PER_PAGE).get_page(1)
         return render(request, 'supervisors/list.html', {
-            'supervisors': Paginator(Supervisor.objects.none(), PER_PAGE).get_page(1),
+            'supervisors': empty_page,
             'has_supervisors': False,
         })
 
-    # Simple approach - get supervisors and count their students through groups
-    supervisors = Supervisor.objects.filter(department=department).select_related('department').order_by('name')
+    # Annotate each supervisor with the number of related students.
+    # Adjust the Count() field path below depending on your models:
+    # - If Group model FK is `supervisor` and Student model FK to group is `group`,
+    #   the lookup is 'group__students' (students is the related_name on Student -> Group).
+    # - If your Student model has supervisor FK directly, use 'student' or your related_name.
+    supervisors_qs = (
+        Supervisor.objects
+        .filter(department=department)
+        .select_related('department')
+        .annotate(current_students_count=Count('group__students', distinct=True))
+        .order_by('name')
+    )
 
-    # Paginate first
-    paginator = Paginator(supervisors, PER_PAGE)
+    # Pagination
     page_number = request.GET.get('page', 1)
-    supervisors_page = paginator.get_page(page_number)
-
-    # Then get student counts for these supervisors
-    supervisor_ids = [s.id for s in supervisors_page]
-    student_counts = {}
-
-    # Count students for each supervisor through their group
-    for group in Group.objects.filter(supervisor_id__in=supervisor_ids).prefetch_related('students'):
-        student_counts[group.supervisor_id] = group.students.count()
-
-    # Add counts to supervisors
-    for supervisor in supervisors_page:
-        supervisor.current_students_count = student_counts.get(supervisor.id, 0)
+    paginator = Paginator(supervisors_qs, PER_PAGE)
+    try:
+        supervisors_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        supervisors_page = paginator.page(1)
+    except EmptyPage:
+        supervisors_page = paginator.page(paginator.num_pages)
 
     has_supervisors = paginator.count > 0
 
