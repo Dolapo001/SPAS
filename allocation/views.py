@@ -2,7 +2,7 @@ import io
 import json
 
 from django.contrib.auth.decorators import login_required
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db.models import Count, Avg
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -10,7 +10,6 @@ from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.views.decorators.http import require_POST
-
 from nacos_allocation import settings
 from students.models import Student
 from supervisors.models import Supervisor
