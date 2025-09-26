@@ -31,7 +31,7 @@ if 'runserver' in sys.argv:
 SECRET_KEY = 'django-insecure-=+22$xoy%y(t9^u1v5nuo6kc@5lwoh*sjody+sngntip2_b&3p'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 #DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
