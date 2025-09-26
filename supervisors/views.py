@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponse
 
+from allocation.models import Group
 from students.models import Student
 from .models import Supervisor
 from .forms import SupervisorForm, SupervisorUploadForm
