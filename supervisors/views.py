@@ -27,50 +27,25 @@ def supervisor_list(request):
             'has_supervisors': False,
         })
 
-    # 1) Build base qs scoped to the user's department
-    base_qs = Supervisor.objects.filter(department=department).select_related('department').order_by('name')
+    # Simple approach - get supervisors and count their students through groups
+    supervisors = Supervisor.objects.filter(department=department).select_related('department').order_by('name')
 
-    # 2) Try to detect the reverse accessor name for Student -> Supervisor
-    student_accessor = None
-    for rel in Supervisor._meta.get_fields():
-        # one_to_many covers ForeignKey from Student -> Supervisor
-        if getattr(rel, "one_to_many", False) and getattr(rel, "related_model", None):
-            if rel.related_model.__name__ == "Student":
-                student_accessor = rel.get_accessor_name()
-                break
-
-    if student_accessor:
-        # Annotate count directly in the Supervisor queryset (single DB hit)
-        # If you want only active students counted, use Count(student_accessor, filter=Q(...))
-        qs = base_qs.annotate(current_students_count=Count(student_accessor))
-        # If you want to sort by busiest supervisors, you could add:
-        # qs = qs.order_by('-current_students_count', 'name')
-    else:
-        # Fallback: no direct Student reverse relation detected—use base queryset
-        qs = base_qs
-
-    # 3) Paginate
-    paginator = Paginator(qs, PER_PAGE)
+    # Paginate first
+    paginator = Paginator(supervisors, PER_PAGE)
     page_number = request.GET.get('page', 1)
     supervisors_page = paginator.get_page(page_number)
 
-    # 4) If we couldn't annotate above, compute per-page counts efficiently
-    if not student_accessor and supervisors_page.object_list:
-        supervisor_ids = [s.id for s in supervisors_page.object_list]
-        counts = (
-            Student.objects
-            .filter(supervisor_id__in=supervisor_ids)  # uses lower-level FK id lookup; change if your FK name differs
-            .values('supervisor_id')
-            .annotate(cnt=Count('id'))
-        )
-        counts_map = {c['supervisor_id']: c['cnt'] for c in counts}
-        for s in supervisors_page.object_list:
-            s.current_students_count = counts_map.get(s.id, 0)
-    else:
-        # If annotated, each supervisor already has current_students_count (or we ensure attribute exists)
-        for s in supervisors_page.object_list:
-            if not hasattr(s, 'current_students_count'):
-                s.current_students_count = 0
+    # Then get student counts for these supervisors
+    supervisor_ids = [s.id for s in supervisors_page]
+    student_counts = {}
+
+    # Count students for each supervisor through their group
+    for group in Group.objects.filter(supervisor_id__in=supervisor_ids).prefetch_related('students'):
+        student_counts[group.supervisor_id] = group.students.count()
+
+    # Add counts to supervisors
+    for supervisor in supervisors_page:
+        supervisor.current_students_count = student_counts.get(supervisor.id, 0)
 
     has_supervisors = paginator.count > 0
 
