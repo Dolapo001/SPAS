@@ -1,10 +1,13 @@
 # supervisors/views.py
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponse
 
+from students.models import Student
 from .models import Supervisor
 from .forms import SupervisorForm, SupervisorUploadForm
 import csv
@@ -15,29 +18,64 @@ PER_PAGE = 20  # rows per page for pagination
 
 @login_required(login_url='/login/')
 def supervisor_list(request):
-    print(f"User: {request.user}")
-    print(f"User department: {getattr(request.user, 'department', 'No department attribute')}")
+    department = getattr(request.user, "department", None)
 
-    if hasattr(request.user, 'department') and request.user.department:
-        print(f"User department ID: {request.user.department.id}")
-        print(f"User department name: {request.user.department.name}")
+    # If user has no department, return empty results
+    if not department:
+        return render(request, 'supervisors/list.html', {
+            'supervisors': Paginator(Supervisor.objects.none(), PER_PAGE).get_page(1),
+            'has_supervisors': False,
+        })
 
-        # Check how many supervisors are in this department
-        supervisor_count = Supervisor.objects.filter(department=request.user.department).count()
-        print(f"Supervisors in user's department: {supervisor_count}")
+    # 1) Build base qs scoped to the user's department
+    base_qs = Supervisor.objects.filter(department=department).select_related('department').order_by('name')
 
-        qs = Supervisor.objects.filter(department=request.user.department).order_by('name')
+    # 2) Try to detect the reverse accessor name for Student -> Supervisor
+    student_accessor = None
+    for rel in Supervisor._meta.get_fields():
+        # one_to_many covers ForeignKey from Student -> Supervisor
+        if getattr(rel, "one_to_many", False) and getattr(rel, "related_model", None):
+            if rel.related_model.__name__ == "Student":
+                student_accessor = rel.get_accessor_name()
+                break
+
+    if student_accessor:
+        # Annotate count directly in the Supervisor queryset (single DB hit)
+        # If you want only active students counted, use Count(student_accessor, filter=Q(...))
+        qs = base_qs.annotate(current_students_count=Count(student_accessor))
+        # If you want to sort by busiest supervisors, you could add:
+        # qs = qs.order_by('-current_students_count', 'name')
     else:
-        qs = Supervisor.objects.none()
+        # Fallback: no direct Student reverse relation detected—use base queryset
+        qs = base_qs
 
+    # 3) Paginate
     paginator = Paginator(qs, PER_PAGE)
     page_number = request.GET.get('page', 1)
-    supervisors = paginator.get_page(page_number)
+    supervisors_page = paginator.get_page(page_number)
 
-    has_supervisors = qs.exists()
+    # 4) If we couldn't annotate above, compute per-page counts efficiently
+    if not student_accessor and supervisors_page.object_list:
+        supervisor_ids = [s.id for s in supervisors_page.object_list]
+        counts = (
+            Student.objects
+            .filter(supervisor_id__in=supervisor_ids)  # uses lower-level FK id lookup; change if your FK name differs
+            .values('supervisor_id')
+            .annotate(cnt=Count('id'))
+        )
+        counts_map = {c['supervisor_id']: c['cnt'] for c in counts}
+        for s in supervisors_page.object_list:
+            s.current_students_count = counts_map.get(s.id, 0)
+    else:
+        # If annotated, each supervisor already has current_students_count (or we ensure attribute exists)
+        for s in supervisors_page.object_list:
+            if not hasattr(s, 'current_students_count'):
+                s.current_students_count = 0
+
+    has_supervisors = paginator.count > 0
 
     return render(request, 'supervisors/list.html', {
-        'supervisors': supervisors,
+        'supervisors': supervisors_page,
         'has_supervisors': has_supervisors,
     })
 

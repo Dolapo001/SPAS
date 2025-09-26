@@ -181,35 +181,44 @@ class PasswordResetConfirmView(View):
 # views.py
 @login_required(login_url='/login/')
 def dashboard(request):
-    department = request.user.department
+    department = getattr(request.user, "department", None)
 
-    # Count students in the current department
+    # If user has no department, show zeros and an empty allocations queryset.
+    if not department:
+        context = {
+            "total_students": 0,
+            "total_supervisors": 0,
+            "total_groups": 0,
+            "completed_allocations": 0,
+            "allocations": AllocationResult.objects.none(),
+        }
+        return render(request, "dashboard.html", context)
+
+    # Department-scoped counts
     total_students = Student.objects.filter(department=department).count()
 
-    # Count supervisors (if they're department-specific, add filter)
-    total_supervisors = Supervisor.objects.count()
+    # If Supervisor has a ForeignKey to department:
+    total_supervisors = Supervisor.objects.filter(department=department).count()
 
-    # Count groups in the current department
+    # If Supervisor has a ManyToManyField named `departments` (uncomment & use instead):
+    # total_supervisors = Supervisor.objects.filter(departments=department).distinct().count()
+
     total_groups = Group.objects.filter(department=department).count()
 
-    # Count completed allocations for the department
-    completed_allocations = AllocationResult.objects.filter(
-        groups__department=department
-    ).distinct().count()
-
-    # Get recent allocations for the department
-    allocations = AllocationResult.objects.filter(
-        groups__department=department
-    ).distinct().order_by('-created_at')[:5]
+    # Reuse the allocation queryset to avoid duplicate/filtering work
+    allocation_qs = AllocationResult.objects.filter(groups__department=department).distinct().order_by('-created_at')
+    completed_allocations = allocation_qs.count()
+    allocations = allocation_qs[:5]
 
     context = {
-        'total_students': total_students,
-        'total_supervisors': total_supervisors,
-        'total_groups': total_groups,
-        'completed_allocations': completed_allocations,
-        'allocations': allocations,
+        "total_students": total_students,
+        "total_supervisors": total_supervisors,
+        "total_groups": total_groups,
+        "completed_allocations": completed_allocations,
+        "allocations": allocations,
     }
-    return render(request, 'dashboard.html', context)
+    return render(request, "dashboard.html", context)
+
 
 # views.py
 @csrf_protect
